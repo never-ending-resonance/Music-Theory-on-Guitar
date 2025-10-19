@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Theory Tool</title>
+    <style>
+        /* ==================== [1. BASE LAYOUT AND RESET] ====================
+           - Import font, set up base body background, layout containers, and header
+        */
+        @import url('https://fonts.googleapis.com/css?family=UnifrakturCook:700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'UnifrakturCook', 'Old English Text MT', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #185cdb 0%, #7621ca 100%);
+            min-height: 100vh; padding: 20px;
+        }
+        .container {
+            max-width: 1600px; margin: 0 auto; background: white;
+            border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            font-family: 'UnifrakturCook', 'Old English Text MT', serif;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white; padding: 30px; text-align: center;
+            font-family: 'UnifrakturCook', 'Old English Text MT', serif;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        .main-content { padding: 30px; font-family: 'UnifrakturCook', 'Old English Text MT', serif;}
+        .grid {
+            display: grid; grid-template-columns: 2fr 1fr; gap: 24px;
+            font-family: 'UnifrakturCook', 'Old English Text MT', serif;
+        }
+
+        /* ==================== [2. TOOL UI COMPONENTS] ====================
+           - Card style for each tool, inputs, buttons, output result
+        */
+        .tool-section {
+            margin-bottom: 40px; padding: 25px;
+            border: 2px solid #08313b; border-radius: 10px;
+            background: #3a91e7;
+        }
+        .tool-section h2 {
+            color: #2c3e50; margin-bottom: 20px;
+            font-size: 1.8em; border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .input-group { margin-bottom: 20px; }
+        .input-group label {
+            display: block; margin-bottom: 8px; font-weight: bold;
+            color: #34495e;
+        }
+        .input-group select, .input-group input {
+            width: 100%; padding: 12px;
+            border: 2px solid #bdc3c7; border-radius: 8px; font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        .input-group select:focus, .input-group input:focus {
+            outline: none; border-color: #3498db;
+        }
+        .button {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white; border: none; padding: 12px 25px;
+            border-radius: 8px; font-size: 16px; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        .result {
+            margin-top: 20px; padding: 20px; background: #e8f5e8;
+            border-left: 5px solid #27ae60; border-radius: 5px;
+            font-family: 'UnifrakturCook', 'Old English Text MT', 'Courier New', monospace;
+        }
+
+        /* ==================== [3. FRETBOARD SECTION] ====================
+           - Guitar fretboard visualization, including notes, dot styles, strings, etc.
+        */
+        .fretboard {
+            font-family: 'Courier New', monospace; background: #011822;
+            color: rgb(106, 81, 218); padding: 30px 25px 35px 25px;
+            border-radius: 14px; min-width: 1100px; max-width: 100%;
+            min-height: 250px; overflow-x: auto; margin-bottom: 15px;
+            display: block;
+        }
+        .fretboard-header { display: flex; margin-bottom: 10px; }
+        .fretboard-header div {
+            width: 38px; text-align: center; font-weight: bold;
+        }
+        .fretboard-string { display: flex; margin-bottom: 7px; }
+        .fretboard-string div {
+            width: 38px; text-align: center; padding: 5px;
+        }
+        .fretboard-string .string-label {
+            background: #342017; font-weight: bold; margin-right: 10px;
+        }
+        /* Black string line */
+        .fretboard-string .string-line {
+            height: 3px; width: 100%; background: #000; border-radius: 2px;
+        }
+        .note-dot {
+            display: flex; align-items: center; justify-content: center; background: none;
+        }
+        .note-empty { color: #33e0ec; font-size: 18px; }
+
+        /* ==================== [4. ADVANCED VISUAL ELEMENTS] ====================
+           - Star twinkle animation for dot notes, subgrid visualizations, bullets, etc
+        */
+        .note-dot .star-dot {
+            position: relative; display: inline-block; width: 17px; height: 17px;
+            animation: twinkle-star 2s infinite ease-in-out;
+        }
+        .note-dot .star-dot::before,
+        .note-dot .star-dot::after {
+            content: '';
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, -50%) rotate(0deg); border-radius: 50%;
+            background: radial-gradient(circle at 50% 40%, #fff 65%, #7ffcff 80%, #03d8fd 97%, #00fafc20 100%);
+        }
+        .note-dot .star-dot::before {
+            width: 17px; height: 17px; opacity: 0.96;
+            filter: blur(0.5px) drop-shadow(0 0 10px #fff3) drop-shadow(0 0 6px #57fcffbb);
+            z-index: 1;
+        }
+        .note-dot .star-dot::after {
+            width: 13px; height: 13px; opacity: 0.83;
+            filter: blur(1.2px) drop-shadow(0 0 6px #67fcfc88);
+            z-index: 2;
+        }
+        .note-dot .star-ray {
+            position: absolute; left: 50%; top: 50%;
+            width: 2px; height: 13px; border-radius: 2px;
+            background: linear-gradient(to bottom, #fff, #17e8ff99 80%, transparent 100%);
+            transform-origin: center 70%; opacity: 0.78; z-index: 9;
+            pointer-events: none; animation: twinkle-ray-flicker 1.7s infinite alternate;
+        }
+        .note-dot .star-ray.ray-1 { transform: translate(-50%, -50%) rotate(0deg); animation-delay: 0.5s;}
+        .note-dot .star-ray.ray-2 { transform: translate(-50%, -50%) rotate(60deg); animation-delay: 0.5s;}
+        .note-dot .star-ray.ray-3 { transform: translate(-50%, -50%) rotate(120deg); animation-delay: 0.5s;}
+        .note-dot .star-ray.ray-4 { transform: translate(-50%, -50%) rotate(180deg); animation-delay: 0.5s;}
+        .note-dot .star-ray.ray-5 { transform: translate(-50%, -50%) rotate(240deg); animation-delay: 0.5s;}
+        .note-dot .star-ray.ray-6 { transform: translate(-50%, -50%) rotate(300deg); animation-delay: 0.5s;}
+
+        @keyframes twinkle-star {
+            0%, 100%   { filter: brightness(1.3) drop-shadow(0 0 8px #2888c988);}
+            40%        { filter: brightness(1.9) drop-shadow(0 0 13px #2aabdf);}
+            50%        { filter: brightness(2.3) drop-shadow(0 0 24px #12cbd1);}
+            60%        { filter: brightness(1.6) drop-shadow(0 0 10px #034750);}
+            80%        { filter: brightness(1.2);}
+        }
+        @keyframes twinkle-ray-flicker {
+            0%, 100% { opacity: 0.80; }
+            40%      { opacity: 0.98; }
+            53%      { opacity: 0.54; }
+            67%      { opacity: 0.77; }
+            73%      { opacity: 0.88; }
+        }
+        .fretboard-large-horizontal {
+            width: 100%; overflow-x: auto;
+            display: flex; flex-direction: row;
+            justify-content: flex-start; align-items: flex-start;
+        }
+        .subgrids-container {
+            display: flex; flex-direction: row; gap: 40px;
+            justify-content: flex-start; margin-top: 25px;
+        }
+        .subgrid-box {
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .subgrid-label {
+            margin-bottom: 7px; font-size: 1.18em; font-weight: bold;
+            color: #4e2a1e; letter-spacing: 1px;
+        }
+        .subgrid-5x5 {
+            display: grid; grid-template-rows: repeat(5, 1fr);
+            grid-template-columns: repeat(5, 1fr); gap: 3px;
+            background: #e7e3e0; border: 2.5px solid #4e2a1e;
+            border-radius: 7px; width: 110px; height: 110px;
+            box-shadow: 0 1px 7px #0003;
+        }
+        .subgrid-5x5-cell {
+            background: #fff; border-radius: 50%; width: 18px; height: 18px;
+            margin: auto;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+        }
+        .subgrid-dot {
+            background: #03d5fc; border-radius: 50%; width: 10px; height: 10px; display: inline-block;
+        }
+        .note-display {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;
+        }
+        .note-item {
+            background: #3498db; color: white; padding: 8px 15px;
+            border-radius: 20px; font-weight: bold;
+        }
+        .frequency-display {
+            background: #9b59b6; color: white; padding: 8px 15px;
+            border-radius: 20px; font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Music Theory Tool</h1>
+            <p>Interactive music theory calculator and guitar fretboard visualizer</p>
+        </div>
+        <div class="main-content">
+            <div class="grid">
+
+                <!-- ===================== [A. INTERVAL CALCULATOR] =====================
+                     Calculates the interval and number of semitones between two notes.
+                -->
+                <div class="tool-section" id="interval-section">
+                        <h2>Interval Calculator</h2>
+                        <div class="input-group">
+                            <label for="note1">First Note:</label>
+                            <select id="note1">
+                                <option value="C">C</option>
+                                <option value="C#">C#</option>
+                                <option value="D">D</option>
+                                <option value="D#">D#</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="F#">F#</option>
+                                <option value="G">G</option>
+                                <option value="G#">G#</option>
+                                <option value="A">A</option>
+                                <option value="A#">A#</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="note2">Second Note:</label>
+                            <select id="note2">
+                                <option value="E">E</option>
+                                <option value="C">C</option>
+                                <option value="C#">C#</option>
+                                <option value="D">D</option>
+                                <option value="D#">D#</option>
+                                <option value="F">F</option>
+                                <option value="F#">F#</option>
+                                <option value="G">G</option>
+                                <option value="G#">G#</option>
+                                <option value="A">A</option>
+                                <option value="A#">A#</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <button class="button" onclick="handleIntervalCalc()">Calculate Interval</button>
+                    <div id="intervalResult" class="result" style="display: none;"></div>
+                    </div>
+
+                <!-- ===================== [B. SCALE GENERATOR] =====================
+                     Generates the notes for a selected scale type for the given root note.
+                -->
+                <div class="tool-section" id="scale-section">
+                        <h2>Scale Generator</h2>
+                        <div class="input-group">
+                            <label for="scaleRoot">Root Note:</label>
+                            <select id="scaleRoot">
+                                <option value="C">C</option>
+                                <option value="C#">C#</option>
+                                <option value="D">D</option>
+                                <option value="D#">D#</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="F#">F#</option>
+                                <option value="G">G</option>
+                                <option value="G#">G#</option>
+                                <option value="A">A</option>
+                                <option value="A#">A#</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="scaleType">Scale Type:</label>
+                            <select id="scaleType">
+                                <option value="ionian">Ionian (Major)</option>
+                                <option value="dorian">Dorian</option>
+                                <option value="phrygian">Phrygian</option>
+                                <option value="lydian">Lydian</option>
+                                <option value="mixolydian">Mixolydian</option>
+                                <option value="aeolian">Aeolian (Natural Minor)</option>
+                                <option value="locrian">Locrian</option>
+                                <option value="harmonic_minor">Harmonic Minor</option>
+                                <option value="melodic_minor">Melodic Minor</option>
+                                <option value="ionian_pentatonic">Major Pentatonic</option>
+                                <option value="aeolian_pentatonic">Minor Pentatonic</option>
+                            </select>
+                        </div>
+                        <button class="button" onclick="handleScaleGen()">Generate Scale</button>
+                    <div id="scaleResult" class="result" style="display: none;"></div>
+                    </div>
+
+                <!-- ===================== [C. FREQUENCY CALCULATOR] =====================
+                     Calculates the frequency for any note and selected octave. 
+                -->
+                <div class="tool-section" id="frequency-section">
+                        <h2>Note Frequency Calculator</h2>
+                        <div class="input-group">
+                            <label for="freqNote">Note:</label>
+                            <select id="freqNote">
+                                <option value="C">C</option>
+                                <option value="C#">C#</option>
+                                <option value="D">D</option>
+                                <option value="D#">D#</option>
+                                <option value="E">E</option>
+                                <option value="F">F</option>
+                                <option value="F#">F#</option>
+                                <option value="G">G</option>
+                                <option value="G#">G#</option>
+                                <option value="A" selected>A</option>
+                                <option value="A#">A#</option>
+                                <option value="B">B</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="octave">Octave:</label>
+                            <input type="number" id="octave" value="4" min="0" max="8">
+                        </div>
+                        <button class="button" onclick="handleFrequencyCalc()">Calculate Frequency</button>
+                    <div id="frequencyResult" class="result" style="display: none;"></div>
+                </div>
+
+                <!-- ===================== [D. GUITAR FRETBOARD VISUALIZER] =====================
+                     Visualizes the requested scale pattern on a virtual guitar neck, with interactive options.
+                -->
+                <div class="tool-section" id="fretboard-section">
+                    <h2>Guitar Fretboard Visualizer</h2>
+                    <div class="input-group">
+                        <label for="fretboardRoot">Root Note for Scale:</label>
+                        <select id="fretboardRoot">
+                            <option value="E">E</option>
+                            <option value="C">C</option>
+                            <option value="C#">C#</option>
+                            <option value="D">D</option>
+                            <option value="D#">D#</option>
+                            <option value="F">F</option>
+                            <option value="F#">F#</option>
+                            <option value="G">G</option>
+                            <option value="G#">G#</option>
+                            <option value="A">A</option>
+                            <option value="A#">A#</option>
+                            <option value="B">B</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fretboardScale">Scale Type:</label>
+                        <select id="fretboardScale">
+                            <option value="aeolian">Aeolian (Natural Minor)</option>
+                            <option value="ionian">Ionian (Major)</option>
+                            <option value="dorian">Dorian</option>
+                            <option value="phrygian">Phrygian</option>
+                            <option value="lydian">Lydian</option>
+                            <option value="mixolydian">Mixolydian</option>
+                            <option value="locrian">Locrian</option>
+                            <option value="harmonic_minor">Harmonic Minor</option>
+                            <option value="melodic_minor">Melodic Minor</option>
+                            <option value="aeolian_pentatonic">Minor Pentatonic</option>
+                            <option value="ionian_pentatonic">Major Pentatonic</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="fretRange">Fret Range:</label>
+                        <input type="range" id="fretRange" min="0" max="22" value="12" oninput="handleUpdateFretboard()">
+                        <span id="fretRangeValue">12</span> frets
+                    </div>
+                    <button class="button" onclick="handleDrawFretboard()">Show Fretboard</button>
+                    <div id="fretboardResult" class="fretboard" style="display: none;"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // ==================== [SECTION 1: DATA, CONSTANTS, AND LIBRARIES] ====================
+    // Description: Definitions for notes, intervals, supported scales, pentatonics, and guitar tuning.
+
+    const NOTES = [
+        ["C", 261.63], ["C#", 277.18], ["D", 293.66], ["D#", 311.13], ["E", 329.63], ["F", 349.23],
+        ["F#", 369.99], ["G", 392.00], ["G#", 415.30], ["A", 440.00], ["A#", 466.16], ["B", 493.88]
+    ];
+    const NOTE_TO_INDEX = {};
+    const NOTE_TO_FREQ = {};
+    NOTES.forEach((note, i) => {
+        NOTE_TO_INDEX[note[0]] = i;
+        NOTE_TO_FREQ[note[0]] = note[1];
+    });
+
+        const INTERVALS = {
+        0: "Unison", 1: "Minor Second", 2: "Major Second", 3: "Minor Third",
+        4: "Major Third", 5: "Perfect Fourth", 6: "Tritone", 7: "Perfect Fifth",
+        8: "Minor Sixth", 9: "Major Sixth", 10: "Minor Seventh", 11: "Major Seventh", 12: "Octave"
+        };
+        const SCALE_MODES = {
+        "ionian": [2,2,1,2,2,2,1], "dorian": [2,1,2,2,2,1,2], "phrygian": [1,2,2,2,1,2,2],
+        "lydian": [2,2,2,1,2,2,1], "mixolydian": [2,2,1,2,2,1,2], "aeolian": [2,1,2,2,1,2,2],
+        "locrian": [1,2,2,1,2,2,2], "harmonic_minor": [2,1,2,2,1,3,1], "melodic_minor": [2,1,2,2,2,2,1]
+        };
+        const PENTATONIC_MODES = {
+        "ionian": [2,2,3,2,3], "dorian": [2,3,2,2,3], "phrygian": [3,2,2,3,2],
+        "lydian": [2,2,4,3,1], "mixolydian": [2,3,2,3,2], "aeolian": [3,2,2,3,2], 
+        "locrian": [2,3,2,3,2], "harmonic_minor": [2,1,4,1,4], "melodic_minor": [2,1,3,2,4]
+    };
+    const GUITAR_STRING_TUNING = ['E', 'A', 'D', 'G', 'B', 'E'];
+
+    // CHORD and BLUES/ARPEGGIO libraries (Extra scale/chord/arp formulas)
+    const CHORD_SCALE_LIBRARY = {
+        ...SCALE_MODES,
+        // Triads
+        "major_triad": [4,3], "minor_triad": [3,4], "augmented_triad": [4,4], "diminished_triad": [3,3],
+        "sus2": [2,5], "sus4": [5,2],
+        // Sevenths
+        "maj7": [4,3,4], "min7": [3,4,3], "7": [4,3,3], "dim7": [3,3,3],
+        "min7b5": [3,3,4], "m7b5": [3,3,4], "M7b5": [4,3,2],
+        // 9ths
+        "maj9": [4,3,4,3], "min9": [3,4,3,4], "9": [4,3,3,4],
+        // Arpeggios
+        "major_arpeggio": [4,3,5], "minor_arpeggio": [3,4,5],
+        // Blues
+        "major_blues": [2,1,1,3,2,3], "minor_blues": [3,2,1,1,3,2], "dominant_blues": [2,1,1,2,2,2,2]
+    };
+
+    // ==================== [SECTION 2: CORE MUSIC THEORY FUNCTIONS] ====================
+    // Description: Core theory utilities for interval calculation, scale building, frequency, etc.
+
+    /**
+     * Returns the interval/semitone distance and name between two notes.
+     */
+    function getInterval(note1, note2) {
+        let idx1 = NOTE_TO_INDEX[note1], idx2 = NOTE_TO_INDEX[note2];
+        if (typeof idx1 === "undefined" || typeof idx2 === "undefined") {
+            console.error(`Invalid note: ${note1}, ${note2}`);
+            throw new Error(`Invalid note: ${note1}, ${note2}`);
+        }
+        let distance = (idx2 - idx1 + 12) % 12;
+        let intervalName = INTERVALS[distance] !== undefined ? INTERVALS[distance] : `${distance} semitones`;
+        return [distance, intervalName];
+    }
+
+    /**
+     * Builds array of scale note names starting from root for a mode or pentatonic
+     */
+        function buildScale(root, scaleType) {
+        let intervals, isPentatonic = scaleType.includes('pentatonic');
+        if (isPentatonic) {
+            let baseType = scaleType.replace('_pentatonic','');
+            intervals = PENTATONIC_MODES[baseType] || PENTATONIC_MODES['ionian'];
+            } else {
+                intervals = SCALE_MODES[scaleType] || SCALE_MODES['ionian'];
+            }
+        let notes = [];
+        let idx = NOTE_TO_INDEX[root];
+        if(typeof idx === "undefined") throw new Error("Invalid root note: " + root);
+        notes.push(NOTES[idx][0]);
+        intervals.forEach(step => {
+            idx = (idx + step) % 12;
+            notes.push(NOTES[idx][0]);
+        });
+        if (isPentatonic && notes.length > 5) return notes.slice(0,5);
+        return notes;
+    }
+
+    /**
+     * Returns frequency for note, octave.
+     */
+    function getFrequency(note, octave) {
+        if (!(note in NOTE_TO_FREQ)) throw new Error("Invalid note name: " + note);
+        if (isNaN(octave) || octave < 0 || octave > 8) throw new Error("Invalid octave (0-8)");
+        const baseFreq = NOTE_TO_FREQ[note];
+        return baseFreq * Math.pow(2, octave - 4);
+    }
+
+    /**
+     * Returns note name for a given open string note and fret.
+     */
+    function getFretNote(openNote, fret) {
+        let idx = NOTE_TO_INDEX[openNote];
+        if (typeof idx === "undefined") throw new Error("Invalid open string note: " + openNote);
+        let noteAtFret = (idx + fret) % 12;
+        return NOTES[noteAtFret][0];
+    }
+
+    /**
+     * Builds a scale/chord/arpeggio using a preset formula or supplied intervals.
+     */
+    function buildCustomScale(root, scaleType, customIntervals) {
+        let intervals;
+        if (customIntervals && Array.isArray(customIntervals)) {
+            intervals = customIntervals;
+        } else {
+            intervals = CHORD_SCALE_LIBRARY[scaleType] || SCALE_MODES[scaleType] || SCALE_MODES['ionian'];
+        }
+        let notes = [];
+            let idx = NOTE_TO_INDEX[root];
+        if(typeof idx === "undefined") throw new Error("Invalid root note: " + root);
+        notes.push(NOTES[idx][0]);
+        for(let step of intervals) {
+            idx = (idx + step) % 12;
+                notes.push(NOTES[idx][0]);
+            }
+            return notes;
+        }
+
+    /**
+     * Parses a string "2,2,1,2" into [2,2,1,2].
+     */
+    function parseIntervalInput(str) {
+        if (typeof str !== "string") return null;
+        let arr = str.split(',').map(s => parseInt(s.trim(), 10)).filter(x => !isNaN(x));
+        return arr.length ? arr : null;
+    }
+
+    // ==================== [SECTION 3: EVENT HANDLERS FOR UI] ====================
+    // Description: Connects the musical tools to their input forms.
+
+    // INTERVAL
+    function handleIntervalCalc() {
+        const note1 = document.getElementById('note1').value;
+        const note2 = document.getElementById('note2').value;
+        const result = document.getElementById('intervalResult');
+        try {
+            const [distance, intervalName] = getInterval(note1, note2);
+
+            // Abbreviation map
+            const intervalAbbrevMap = {
+                "Perfect Unison": "P1", "Minor Second": "m2", "Major Second": "M2", "Minor Third": "m3",
+                "Major Third": "M3", "Perfect Fourth": "P4", "Tritone": "TT", "Perfect Fifth": "P5",
+                "Minor Sixth":"m6", "Major Sixth": "M6", "Minor Seventh": "m7", "Major Seventh": "M7", "Octave":"P8"
+            };
+            let abbrev = intervalAbbrevMap[intervalName] || "";
+            result.innerHTML = abbrev;
+            result.style.display = 'block';
+        } catch (err) {
+            result.innerHTML = `<span style="color:red">${err.message}</span>`;
+            result.style.display = 'block';
+        }
+    }
+
+    // SCALE (and custom scale)
+        function handleScaleGen() {
+        const root = document.getElementById('scaleRoot').value;
+        const scaleType = document.getElementById('scaleType').value;
+        const result = document.getElementById('scaleResult');
+        let isCustomScale = scaleType === "custom";
+        let customIntervals = null;
+
+        // Dynamically build the select options for all scales/chords/arpeggios defined in CHORD_SCALE_LIBRARY, SCALE_MODES, and PENTATONIC_MODES
+        // This can be used to enhance the UI dropdown in addition to the handler
+
+        // (If you want the dropdown options to be dynamic, consider replacing static <option>s in your HTML with code like this block:)
+        // const scaleTypeSelect = document.getElementById('scaleType');
+        // scaleTypeSelect.innerHTML = '';
+        // const allTypes = { ...CHORD_SCALE_LIBRARY, ...SCALE_MODES, ...PENTATONIC_MODES };
+        // Object.keys(allTypes).forEach(type => {
+        //     const opt = document.createElement('option');
+        //     opt.value = type;
+        //     opt.textContent = type.replace(/_/g, " ").replace(/([a-z])/, v=>v.toUpperCase());
+        //     scaleTypeSelect.appendChild(opt);
+        // });
+        // Custom and pentatonics could be handled with labels, etc.
+
+        if (isCustomScale) {
+            const customInput = document.getElementById('customScaleIntervals');
+            if (customInput) {
+                customIntervals = parseIntervalInput(customInput.value);
+                if (!customIntervals || !customIntervals.length) {
+                    result.innerHTML = `<span style="color:red">Please enter valid custom intervals (e.g. 2,2,1,2,2,2,1).</span>`;
+                    result.style.display = 'block';
+                    return;
+                }
+            } else {
+                result.innerHTML = `<span style="color:red">Custom interval input box not found.</span>`;
+                result.style.display = 'block';
+                return;
+            }
+        }
+        try {
+            const scaleNotes = buildCustomScale(root, scaleType, customIntervals);
+
+            // Properly prettify the chord/scale/arpeggio name, including for chords like sus2, sus4, major_triad, etc.
+            let prettyScaleName = '';
+            if (isCustomScale) {
+                prettyScaleName = "Custom Scale";
+            } else if (scaleType in CHORD_SCALE_LIBRARY) {
+                // Chord or arpeggio
+                // Add more formatting if desired (e.g. "min7b5" => "m7♭5", etc)
+                prettyScaleName = scaleType
+                    .replace(/_/g, ' ')
+                    .replace(/major/i, "Major")
+                    .replace(/minor/i, "Minor")
+                    .replace(/maj7/gi, "Maj7")
+                    .replace(/min7/gi, "Min7")
+                    .replace(/m7b5/gi, "m7♭5")
+                    .replace(/M7b5/gi, "M7♭5")
+                    .replace(/m7/gi, "m7")
+                    .replace(/7/gi, "7")
+                    .replace(/dim7/gi, "dim7")
+                    .replace(/augmented/gi, "Aug");
+                prettyScaleName = prettyScaleName.charAt(0).toUpperCase() + prettyScaleName.slice(1);
+            } else if (scaleType in SCALE_MODES || scaleType in PENTATONIC_MODES) {
+                prettyScaleName = scaleType.replace(/_/g, " ").replace(/([a-z])/, v => v.toUpperCase());
+            } else {
+                prettyScaleName = scaleType;
+            }
+
+            const scaleLabel = `<strong>${root} ${prettyScaleName}:</strong>`;
+            let noteRowHtml = `<div class="note-display">${scaleNotes.map((note, idx) => `<span class="note-item">${note}</span>`).join('')}</div>`;
+            const diagramsButton = `<button class="button" id="showDiagramsBtn" style="margin-top:13px">Show 3 Fretboard Diagrams</button>`;
+            result.innerHTML = scaleLabel + "<br>" + noteRowHtml + diagramsButton;
+            result.style.display = 'block';
+
+            // Attach the event for "Show 3 Fretboard Diagrams"
+            setTimeout(() => {
+                const btn = document.getElementById('showDiagramsBtn');
+                if (btn) btn.onclick = () => {
+                    showThreeDiagrams(root, scaleType, scaleNotes);
+                };
+            }, 1);
+        } catch (err) {
+            result.innerHTML = `<span style="color:red">${err.message}</span>`;
+            result.style.display = 'block';
+        }
+    } 
+
+
+    // FREQUENCY
+        function handleFrequencyCalc() {
+        const note = document.getElementById('freqNote').value;
+        const octave = parseInt(document.getElementById('octave').value, 10);
+        const result = document.getElementById('frequencyResult');
+        try {
+            const frequency = getFrequency(note, octave);
+            result.innerHTML = `<strong>${note}${octave} Frequency:</strong><br>
+                <span class="frequency-display">${frequency.toFixed(2)} Hz</span>`;
+            result.style.display = 'block';
+        } catch (err) {
+            result.innerHTML = `<span style="color:red">${err.message}</span>`;
+            result.style.display = 'block';
+        }
+    }
+
+    // FRETBOARD
+        function handleDrawFretboard() {
+        // This function draws the selected scale on a 6-string standard guitar fretboard.
+        // Horizontally: each fret = +1 semitone (m2)
+        // Vertically: moving from string to higher string is +P4, except G->B which is +M3.
+        // Dots are drawn where the note belongs to the chosen scale.
+        // Draws a thin transparent line vertically through the 12th fret (if visible).
+
+        const root = document.getElementById('fretboardRoot').value;
+        const scaleType = document.getElementById('fretboardScale').value;
+        const fretMax = parseInt(document.getElementById('fretRange').value, 10);
+        const result = document.getElementById('fretboardResult');
+        try {
+            // Determine scale notes
+            let scaleNotes;
+            if (scaleType === "custom" && document.getElementById('customScaleIntervals')) {
+                const customIntervals = parseIntervalInput(document.getElementById('customScaleIntervals').value);
+                scaleNotes = buildCustomScale(root, scaleType, customIntervals);
+            } else {
+                scaleNotes = buildCustomScale(root, scaleType);
+            }
+
+            // Standard tuning, string 6 (lowest) to string 1 (highest)
+            const guitarTuning = ['E', 'A', 'D', 'G', 'B', 'E'];
+
+            let html = `<h3>${root} ${scaleType.replace('_', ' ').toUpperCase()} Scale Fretboard View</h3>`;
+            html += `<p>Scale notes: ${scaleNotes.join(', ')}</p>`;
+
+            // Wrap overall fretboard in a relative-positioned div for line overlay
+            html += `<div style="position:relative;display:inline-block;">`;
+
+            // Header row (fret numbers)
+            html += `<div class="fretboard-header"><div>String</div>`;
+            for (let f = 0; f <= fretMax; f++) {
+                html += `<div>${f < 10 ? ' ' + f : f}</div>`;
+            }
+            html += `</div>`;
+
+            // Fretboard rows
+            for (let s = 5; s >= 0; s--) {
+                // guitarTuning: 0 = 6th string (lowest E), 5 = 1st string (high E)
+                const stringNum = 6 - s; // Display string numbers 6 to 1
+                const openNote = guitarTuning[s];
+
+                html += `<div class="fretboard-string">`;
+                html += `<div class="string-label">${stringNum}</div>`;
+
+                for (let f = 0; f <= fretMax; f++) {
+                    const note = getFretNote(openNote, f); // Get note at (string, fret)
+                    const isScaleNote = scaleNotes.includes(note);
+                    html += `<div class="${isScaleNote ? 'note-dot' : 'note-empty'}">${isScaleNote ? '●' : '·'}</div>`;
+                }
+                html += `</div>`;
+            }
+
+            // --- Draw thin transparent vertical line for 12th fret (CSS positioned absolutely) ---
+            if (fretMax >= 12) {
+                // The line should be positioned over the 12th fret column
+                // Assumption: each fret column (cell) has width determined by CSS
+                // We'll overlay a div for the vertical line, stretching height of fretboard block.
+                // Count: columns is (fretMax + 2), including "String" at index 0
+
+                // Get cell width from CSS (assume default OR fallback)
+                const cell = document.querySelector(".fretboard-string div:not(.string-label)");
+                let cellWidth = 34; // fallback
+                if (cell) {
+                    cellWidth = cell.offsetWidth || 34;
+                }
+
+                // Math: left edge of fretboard = 0, 12th fret col is (12+1)th div (header has "String" then fret 0, 1, ..., N)
+                // So position at: (cellWidth * (12 + 1)) px
+                // Instead of reading cellWidth, estimate or use CSS var
+
+                html += `
+                <div style="
+                    pointer-events:none;
+                    position:absolute;
+                    top:0;
+                    left:${(12 + 1) * cellWidth}px;
+                    width:3px;
+                    height:100%;
+                    background: linear-gradient(to bottom, rgba(40,200,255,0.18) 0%, rgba(30,100,200,0.08) 100%);
+                    opacity: 0.67;
+                    z-index: 3;
+                    border-radius:2px;
+                    ">
+                </div>`;
+            }
+
+            html += `</div>`; // Close outer relative-positioned div
+
+            result.innerHTML = html;
+            result.style.display = 'block';
+        } catch (err) {
+            result.innerHTML = `<span style="color:red">${err.message}</span>`;
+            result.style.display = 'block';
+        }
+    }
+
+    // SHOW THREE DIAGRAMS
+    // All row indices: 0 = BOTTOM (E string), 1 = A, 2 = D, 3 = TOP (G string)
+    function showThreeDiagrams(root, scaleType, scaleNotes) {
+        const result = document.getElementById('scaleResult');
+        try {
+            // Box dimensions: 7 horizontal x 4 vertical
+            const gridW = 7;
+            const gridH = 4;
+            const cellSize = 30;
+            const deepBlue = "#154d8b";
+            const black = "#000000";
+            const lightGray = "#f0f0f0";
+
+            // Starting positions for each diagram (row 0 is BOTTOM E string up to row 3 top G string)
+            const diagrams = [
+                { label: "Left", startPos: 5, maxNotes: [1, 3, 3, 3] },   // [E, A, D, G] max notes — row 0 = E, row 3 = G
+                { label: "Middle", startPos: 2, maxNotes: [2, 3, 3, 3] },
+                { label: "Right", startPos: 0, maxNotes: [3, 3, 3, 3] }
+            ];
+
+            // Get scale intervals
+            let intervals;
+            if (scaleType.includes("pentatonic")) {
+                let base = scaleType.replace("_pentatonic", "");
+                intervals = PENTATONIC_MODES[base] || PENTATONIC_MODES["ionian"];
+            } else {
+                intervals = SCALE_MODES[scaleType] || SCALE_MODES["ionian"];
+            }
+
+            // Function to build one diagram (row 0 is bottom, row 3 is top)
+            function buildDiagram(startPos, maxNotes) {
+                let box = Array.from({ length: gridH }, () => Array(gridW).fill(null));
+                let notesOnRow = [1, 0, 0, 0]; // E (bottom) to G (top)
+                let currentRow = 0; // Start from lowest row (E string, bottom)
+                let currentCol = startPos;
+                let scaleDegree = 0;
+                let accumulatedRows = 0;
+                let octaveReached = false;
+
+                // Place root note at start position
+                box[currentRow][currentCol] = {
+                    note: scaleNotes[0],
+                    degree: 1,
+                    isRoot: true
+                };
+                notesOnRow[currentRow] = 1;
+                scaleDegree = 1;
+
+                // Continue generating until octave is placed
+                while (!octaveReached) {
+                    // 1. Check if current row exceeded note max
+                    if (notesOnRow[currentRow] < maxNotes[currentRow]) {
+                        // Move horizontally to the right based on the interval (m2: 1 step, M2: 2 steps, m3: 3 steps, etc)
+                        let interval = intervals[(scaleDegree - 1) % intervals.length];
+                        // According to instructions: m2=1 step, M2=2 steps. 
+                        // We'll interpret "m2 = interval==1", "M2 = interval==2"
+                        let horizontalSteps;
+                        if (interval === 1) {
+                            horizontalSteps = 1; // m2
+                        } else if (interval === 2) {
+                            horizontalSteps = 2; // M2
+                        } else {
+                            // For other intervals (e.g. m3=3), go by steps = interval size
+                            horizontalSteps = interval;
+                        }
+                        let nextCol = currentCol + horizontalSteps;
+                        // Check horizontal bounds
+                        if (nextCol >= gridW) break;
+
+                        // nextRow is the same
+                        let nextRow = currentRow;
+
+                        let degree = scaleDegree + 1;
+                        let isRoot = false;
+                        let noteName;
+
+                        if (scaleDegree === intervals.length) {
+                            // This is the octave (root again)
+                            degree = 8;
+                            noteName = root;
+                            isRoot = true;
+                            octaveReached = true;
+                        } else {
+                            noteName = scaleNotes[scaleDegree % scaleNotes.length];
+                        }
+
+                        box[nextRow][nextCol] = {
+                            note: noteName,
+                            degree: degree,
+                            isRoot: isRoot
+                        };
+
+                        notesOnRow[nextRow] += 1;
+                        currentCol = nextCol;
+                        // currentRow stays the same
+                        scaleDegree++;
+                    } else {
+                        // Yes: move to next row above (row+1), column +1 and adjust further left
+                        // Determine previous interval: it's the interval to reach this next degree
+                        let intervalType = intervals[(scaleDegree - 1) % intervals.length];
+                        let intervalShift;
+                        // M2 = 2 -> shift -3, m2 = 1 -> shift -4, m3 = 3 -> shift -2
+                        if (intervalType === 2) {
+                            intervalShift = -4;
+                        } else if (intervalType === 1) {
+                            intervalShift = -5;
+                        } else if (intervalType === 3) {
+                            intervalShift = -3;
+                        } else {
+                            intervalShift = -4;
+                        }
+
+                        let nextRow = currentRow + 1; // move UP (next string above)
+                        let nextCol = currentCol + 1 + intervalShift;
+
+                        if (nextRow >= gridH || nextCol < 0 || nextCol >= gridW) break; // out of bounds
+
+                        let degree = scaleDegree + 1;
+                        let isRoot = false;
+                        let noteName;
+
+                        if (scaleDegree === intervals.length) {
+                            degree = 8;
+                            noteName = root;
+                            isRoot = true;
+                            octaveReached = true;
+                        } else {
+                            noteName = scaleNotes[scaleDegree % scaleNotes.length];
+                        }
+
+                        if (notesOnRow[nextRow] >= maxNotes[nextRow]) break; // can't put on this row
+
+                        box[nextRow][nextCol] = {
+                            note: noteName,
+                            degree: degree,
+                            isRoot: isRoot
+                        };
+                        notesOnRow[nextRow] += 1;
+                        currentRow = nextRow;
+                        currentCol = nextCol;
+                        scaleDegree++;
+                        accumulatedRows++;
+                    }
+                }
+
+                return box;
+            }
+
+            // Function to render one diagram
+            function renderDiagram(box, label) {
+                let html = `
+                    <div style="display:inline-block; margin:20px; padding:15px; border:2px solid #333; border-radius:8px; background:#f9f9f9;">
+                        <h4 style="text-align:center; margin:0 0 10px 0; color:#333;">${label}</h4>
+                        <div style="display:grid; grid-template-columns: repeat(${gridW}, ${cellSize}px); grid-template-rows: repeat(${gridH}, ${cellSize}px); gap:2px;">
+                `;
+
+                // Render grid from top (row 3, G) to bottom (row 0, E)
+                for (let displayRow = gridH - 1; displayRow >= 0; displayRow--) {
+                    for (let col = 0; col < gridW; col++) {
+                        let cell = box[displayRow][col];
+                        let cellStyle = `width:${cellSize}px; height:${cellSize}px; border:1px solid #ccc; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;`;
+
+                        if (cell) {
+                            let bgColor;
+                            let textColor;
+                            if (cell.degree === 8 && cell.isRoot) {
+                                // Octave: solid black
+                                bgColor = black;
+                                textColor = "#fff";
+                            } else if (cell.degree % 2 === 1) {
+                                // Odd number: deep ocean blue (deepBlue)
+                                bgColor = deepBlue;
+                                textColor = "#fff";
+                            } else {
+                                // Even number: light gray
+                                bgColor = lightGray;
+                                textColor = "#000";
+                            }
+                            cellStyle += `background-color:${bgColor}; color:${textColor};`;
+                            html += `<div style="${cellStyle}">${cell.note}</div>`;
+                        } else {
+                            html += `<div style="${cellStyle}">·</div>`;
+                        }
+                    }
+                }
+
+                html += `</div></div>`;
+                return html;
+            }
+
+            // Build and render all diagrams
+            let html = `<div style="text-align:center;">
+                <h3>${root} ${scaleType.replace('_',' ').toUpperCase()} - Three Fretboard Positions</h3>
+                <p>Scale notes: ${scaleNotes.join(', ')}</p>
+                <div style="display:flex; justify-content:center; flex-wrap:wrap; margin-top:20px;">
+            `;
+
+            diagrams.forEach(diagram => {
+                let box = buildDiagram(diagram.startPos, diagram.maxNotes);
+                html += renderDiagram(box, diagram.label);
+            });
+
+            html += `</div></div>`;
+
+            result.innerHTML = html;
+            result.style.display = 'block';
+        } catch (err) {
+            result.innerHTML = `<span style="color:red">Error showing diagrams: ${err.message}</span>`;
+            result.style.display = 'block';
+        }
+    }
+    </script>
+
+    // =========================
+    //   INITIALIZE
+    // =========================
+    document.addEventListener('DOMContentLoaded', () => {
+        // Fret range sync
+        document.getElementById('fretRange').addEventListener('input', handleUpdateFretboard);
+        handleUpdateFretboard();
+
+        // Handlers are now using onclick attributes in HTML
+    });
+    </script>
+</body>
+</html>
+
