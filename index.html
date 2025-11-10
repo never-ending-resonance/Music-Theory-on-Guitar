@@ -14,6 +14,7 @@
             font-family: 'UnifrakturCook', 'Old English Text MT', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #185cdb 0%, #7621ca 100%);
             min-height: 100vh; padding: 20px;
+            zoom: 0.33; /* Zoom out 3 times larger (1/3 = 0.33) */
         }
         .container {
             max-width: 1600px; margin: 0 auto; background: white;
@@ -956,7 +957,397 @@
             result.style.display = 'block';
         }
     }
-    </script>
+    // ============================================
+    //  [Section: ARPEGGIOS PAGE LINK AND SECTION]
+    // ============================================
+    // Add Arpeggios section to the website upon DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', () => {
+        // Add Arpeggio button to the main content if not present
+        if (!document.getElementById('arpeggiosNav')) {
+            const btn = document.createElement('button');
+            btn.id = 'arpeggiosNav';
+            btn.className = 'button';
+            btn.style.margin = '25px 0 0 0';
+            btn.innerText = 'Arpeggios';
+            btn.onclick = () => { showArpeggiosPage(); };
+            document.querySelector('.header').appendChild(btn);
+        }
+    });
+
+    /**
+     * ============[ ARPEGGIOS PAGE: UI and CONTENT ]============
+     * Renders a page with explanations and interactive section
+     * for pentatonic, blues, sus, 7th, 9th, and Japanese scales.
+     */
+    function showArpeggiosPage() {
+        // "Open a new page": clear the main-content area and display arpeggios tools
+        let main = document.querySelector('.main-content');
+        if (!main) return;
+
+        main.innerHTML = `
+            <h2>Arpeggios, Chords, and Pentatonic Modes Generator</h2>
+            <p>
+              <b>Explore generations of major, minor, pentatonics (major/minor/blues), <br>
+              Japanese pentatonic, all supported 7th, sus2, sus4, and 9th chords.</b> <br>
+              <br>
+              <b>Japanese pentatonic:</b> <br>
+              Commonly called "yo" scale:  1, 2, 3, 5, 6 <br>
+              Intervals: M2, M2, m3, M2, m3 (in semitones: 2-2-3-2-3)
+              <pre style="margin:4px 0 0 0; padding:6px; background:#f0f0f080;">
+      Example: C Japanese Pentatonic: C D E G A
+              </pre>
+            </p>
+            <style>
+              .arp-option-group {margin-bottom: 10px;}
+              .arp-option-group label {font-size: 1.35em;}
+              .arp-select {padding:11px 16px; border-radius:6px; font-size:1.35em;}
+              .arp-diagram-wrap {margin-top: 14px;}
+              .arp-groups {margin-top: 22px; display:flex; flex-direction:column; gap:26px;}
+              .arp-group-title {font-size:1.3em; font-weight:bold; margin-bottom:10px;}
+              .arp-group-row {display:flex; flex-wrap:wrap; gap:16px; justify-content:center;}
+            </style>
+            <div class="tool-section">
+              <h3>Choose chord or scale type:</h3>
+              <div class="arp-option-group">
+                <label>Root:
+                  <select id="arpRoot" class="arp-select">
+                    <option>C</option><option>C#</option><option>D</option><option>Eb</option>
+                    <option>E</option><option>F</option><option>F#</option><option>G</option>
+                    <option>Ab</option><option>A</option><option>Bb</option><option>B</option>
+                  </select>
+                </label>
+                <label>Type:
+                  <select id="arpType" class="arp-select">
+                    <optgroup label="Pentatonic scales">
+                      <option value="major_pentatonic">Major Pentatonic</option>
+                      <option value="minor_pentatonic">Minor Pentatonic</option>
+                      <option value="blues_pentatonic">Blues (Minor) Pentatonic</option>
+                      <option value="japanese_pentatonic">Japanese Pentatonic (Yo)</option>
+                    </optgroup>
+                    <optgroup label="Triads">
+                      <option value="major_triad">Major Triad</option>
+                      <option value="minor_triad">Minor Triad</option>
+                      <option value="diminished_triad">Diminished Triad</option>
+                      <option value="augmented_triad">Augmented Triad</option>
+                    </optgroup>
+                    <optgroup label="7th/9th Chords">
+                      <option value="maj7">Major 7th</option>
+                      <option value="min7">Minor 7th</option>
+                      <option value="dom7">Dominant 7th</option>
+                      <option value="minmaj7">Minor Major 7th</option>
+                      <option value="maj9">Major 9th</option>
+                      <option value="min9">Minor 9th</option>
+                      <option value="dom9">Dominant 9th</option>
+                      <option value="half_diminished7">Half-diminished 7th</option>
+                      <option value="fully_diminished7">Fully diminished 7th</option>
+                      <option value="M7b5">Major 7♭5</option>
+                      <option value="M7#5">Major 7♯5</option>
+                      <option value="minor_major7">Minor Major 7th</option>
+                      <option value="french_aug6">French Augmented 6th</option>
+                      <option value="german_aug6">German Augmented 6th</option>
+                      <option value="italian_aug6">Italian Augmented 6th</option>
+                      <option value="M7sus4">Major 7 sus4</option>
+                      <option value="M7sus2">Major 7 sus2</option>
+                    </optgroup>
+                    <optgroup label="Suspended chords">
+                      <option value="sus2">Sus2</option>
+                      <option value="sus4">Sus4</option>
+                    </optgroup>
+                  </select>
+                </label>
+                <button class="button" onclick="generateArpDiagram()">Generate</button>
+              </div>
+              <div id="arpDiagramRes" class="arp-diagram-wrap"></div>
+            </div>
+        `;
+    }
+
+    // =========================================
+    //    [SECTION: CHORD & SCALE LIBRARY]
+    // =========================================
+    // Intervals in semitones for all libraries (pentatonic, blues, Japanese, chords, etc)
+    // (Blues = Minor Pentatonic with an added b5 between 4th and 5th - for diagramming, keep 5-note shape)
+    const ARP_LIB = {
+        'major_pentatonic':      { intervals: [2,2,3,2,3],    name: "Major Pentatonic" }, // 1-2-3-5-6
+        'minor_pentatonic':      { intervals: [3,2,2,3,2],    name: "Minor Pentatonic" }, // 1-b3-4-5-b7
+        'blues_pentatonic':      { intervals: [3,2,1,1,3,2],  name: "Blues (6-note!)" },  // 1-b3-4-b5-5-b7
+        'japanese_pentatonic':   { intervals: [2,2,3,2,3],    name: "Japanese Pentatonic (Yo)" },
+        'major_triad':           { intervals: [4,3],           name: "Major Triad (1-3-5)" },
+        'minor_triad':           { intervals: [3,4],           name: "Minor Triad (1-b3-5)" },
+        'diminished_triad':      { intervals: [3,3],           name: "Diminished Triad (1-b3-b5)" },
+        'augmented_triad':       { intervals: [4,4],           name: "Augmented Triad (1-3-#5)" },
+        // Chord intervals: from root, as steps (stacked)
+        // 7th and 9th chords
+        'maj7':     { intervals: [4,3,4],  name: "Major 7th (1-3-5-7)" },   // 1-3-5-7
+        'min7':     { intervals: [3,4,3],  name: "Minor 7th (1-b3-5-b7)" },
+        'dom7':     { intervals: [4,3,3],  name: "Dominant 7th (1-3-5-b7)" },
+        'minor_major7': { intervals: [3,4,4],  name: "Minor-Major 7th (1-b3-5-7)" },
+        'maj9':     { intervals: [4,3,4,3],  name: "Major 9th (1-3-5-7-9)" },
+        'min9':     { intervals: [3,4,3,4],  name: "Minor 9th (1-b3-5-b7-9)" },
+        'dom9':     { intervals: [4,3,3,4],  name: "Dominant 9th (1-3-5-b7-9)" },
+        'half_diminished7': { intervals: [3,3,4], name: "Half-diminished 7th (1-b3-b5-b7)" },
+        'fully_diminished7': { intervals: [3,3,3], name: "Fully diminished 7th (1-b3-b5-bb7)" },
+        'M7b5':     { intervals: [4,2,5],  name: "Major 7♭5 (1-3-b5-7)" },
+        'M7#5':     { intervals: [4,4,3],  name: "Major 7♯5 (1-3-#5-7)" },
+        'M7sus4':   { intervals: [5,2,4],  name: "Major 7 sus4 (1-4-5-7)" },
+        'M7sus2':   { intervals: [2,5,4],  name: "Major 7 sus2 (1-2-5-7)" },
+        'french_aug6': { intervals: [4,2,6], name: "French Augmented 6th (1-3-#4-#6)" },
+        'german_aug6': { intervals: [4,3,5], name: "German Augmented 6th (1-3-5-#6)" },
+        'italian_aug6': { intervals: [4,6],   name: "Italian Augmented 6th (1-3-#6)" },
+        // Suspended
+        'sus2':     { intervals: [2,5,5], name: "Suspended 2nd (1-2-5)" },
+        'sus4':     { intervals: [5,2,5], name: "Suspended 4th (1-4-5)" }
+    };
+
+    // Map for degrees to names (for display)
+    const DEGREE_NAMES = ["1", "b2/#1", "2", "b3", "3", "4", "b5", "5", "#5/b6", "6", "b7", "7", "8"];
+
+    // All chromatic notes (for enharmonics, but simple version)
+    const CHROMATIC_NOTES = ["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+    function noteIndexOf(n) { return CHROMATIC_NOTES.indexOf(n); }
+    function mod12(i) { let m = i % 12; return m < 0 ? m + 12 : m; }
+    function getNoteByInterval(root, intervalArr) {
+        // Returns array of notes by adding up intervals from root
+        let idx = noteIndexOf(root);
+        let result = [root];
+        let sum = 0;
+        for (let i = 0; i < intervalArr.length; ++i) {
+            sum += intervalArr[i];
+            result.push(CHROMATIC_NOTES[mod12(idx + sum)]);
+        }
+        return result;
+    }
+    function pentatonicScaleNotes(root, pentType) {
+        // Fix: always start at root, and take proper N=5 notes
+        let arr = ARP_LIB[pentType].intervals.slice(0,5);
+        let notes = [root];
+        let idx = noteIndexOf(root);
+        let sum = 0;
+        for (let i = 0; i < arr.length-1; ++i) { // do only 4 intervals: root to 2, 2 to 3,...
+            sum += arr[i];
+            notes.push(CHROMATIC_NOTES[mod12(idx + sum)]);
+        }
+        return notes; // Will always be 5
+    }
+    function bluesScaleNotes(root) {
+        // Blues is 6 notes: 1, b3, 4, b5, 5, b7
+        // [3,2,1,1,3,2]
+        let arr = ARP_LIB['blues_pentatonic'].intervals;
+        let notes = [root];
+        let idx = noteIndexOf(root);
+        let sum = 0;
+        for (let i = 0; i < arr.length-1; ++i) {
+            sum += arr[i];
+            notes.push(CHROMATIC_NOTES[mod12(idx + sum)]);
+        }
+        return notes; // 6
+    }
+
+
+    // =================================================
+    //   [SECTION: ARPEGGIO DIAGRAM GENERATOR LOGIC]
+    // =================================================
+    // Generates a 7x4 mini "box" grid, following fretboard logic and pentatonic/jump rules as in instructions.
+
+    function generateArpDiagram() {
+        // Gather selection
+        const root = document.getElementById('arpRoot').value;
+        const type = document.getElementById('arpType').value;
+        const out = document.getElementById('arpDiagramRes');
+        let info = ARP_LIB[type];
+        if (!info) { out.innerHTML = "<span style='color:red'>Type not found.</span>"; return; }
+        let notes, dispType, label;
+        let isPent = type.includes("pentatonic");
+        let isBlues = type === 'blues_pentatonic';
+        // ------[1. Get scale/chord notes]------
+        if (isPent && !isBlues) {
+            notes = pentatonicScaleNotes(root, type);
+            dispType = info.name;
+        } else if (isBlues) {
+            notes = bluesScaleNotes(root);
+            dispType = info.name;
+        } else if (type === 'japanese_pentatonic') {
+            notes = pentatonicScaleNotes(root, type);  // same as other pentatonics
+            dispType = info.name;
+        } else {
+            notes = getNoteByInterval(root, info.intervals);
+            dispType = info.name;
+        }
+        label = `<div><b>${root} ${dispType}</b><br><span style="font-size:1.1em;">Notes: ${notes.join(", ")}</span></div>`;
+
+        // ------[2. Render Diagrams]------
+        const offsets = [0, 2, 4];
+        const unlimitedNotes = [null, null, null, null, null, null];
+        const stringGroups = [
+            { title: "E String Root Positions", startString: 0 },
+            { title: "A String Root Positions", startString: 1 },
+            { title: "D String Root Positions", startString: 2 },
+            { title: "G String Root Positions", startString: 3 },
+        ];
+
+        let html = label + `<div class="arp-groups">`;
+        stringGroups.forEach(group => {
+            html += `<div class="arp-group"><div class="arp-group-title">${group.title}</div><div class="arp-group-row">`;
+            offsets.forEach((offset, idx) => {
+                const grid = arpBoxGrid(root, info.intervals, offset, group.startString, unlimitedNotes, type);
+                const diagLabel = `Position ${idx + 1} (offset +${offset})`;
+                html += renderArpGrid(grid, diagLabel, notes, info.name, type);
+            });
+            html += `</div></div>`;
+        });
+        html += `</div>`;
+        out.innerHTML = html;
+    }
+
+    // ======================================================
+    //   [SECTION: FRETBBOARD BOX NOTE GENERATOR - REVISED]
+    // ======================================================
+    // See prompt (rules for pentatonic jumping!)
+    function arpBoxGrid(root, intervals, rootColumn, startStringIndex, maxNotes, scaleType) {
+        const gridW = 5, gridH = 6;
+        const strings = ['E', 'A', 'D', 'G', 'B', 'E'];
+        const stringOffsets = [0, 5, 10, 15, 19, 24];
+        const box = Array.from({ length: gridH }, () => Array(gridW).fill(null));
+
+        const rootIndex = NOTE_TO_INDEX[root];
+        if (typeof rootIndex === 'undefined') {
+            return box;
+        }
+
+        const startStringNoteIndex = NOTE_TO_INDEX[strings[startStringIndex]];
+        if (typeof startStringNoteIndex === 'undefined') {
+            return box;
+        }
+        let rootFret = (rootIndex - startStringNoteIndex + 12) % 12;
+        while (rootFret < rootColumn) {
+            rootFret += 12;
+        }
+        const fretOffset = rootFret - rootColumn;
+
+        for (let row = 0; row < gridH; row++) {
+            for (let col = 0; col < gridW; col++) {
+                const fretNumber = col + fretOffset;
+                if (fretNumber < 0) continue;
+                const noteName = getFretNote(strings[row], fretNumber);
+                const pitchNumber = stringOffsets[row] + fretNumber;
+                box[row][col] = {
+                    note: noteName,
+                    pitch: pitchNumber,
+                    show: false,
+                    degree: null,
+                    isRoot: false
+                };
+            }
+        }
+
+        let rootPitchTarget = stringOffsets[startStringIndex] + rootFret;
+        let rootCell = { row: startStringIndex, col: rootColumn };
+        if (!box[rootCell.row] || !box[rootCell.row][rootCell.col] || box[rootCell.row][rootCell.col].note !== root) {
+            outer:
+            for (let row = 0; row < gridH; row++) {
+                for (let col = 0; col < gridW; col++) {
+                    const cell = box[row][col];
+                    if (!cell) continue;
+                    if (cell.note === root) {
+                        rootCell = { row, col };
+                        rootPitchTarget = cell.pitch;
+                        break outer;
+                    }
+                }
+            }
+        } else {
+            rootPitchTarget = box[rootCell.row][rootCell.col].pitch;
+        }
+
+        if (!box[rootCell.row] || !box[rootCell.row][rootCell.col]) {
+            return box;
+        }
+
+        const intervalSequence = (() => {
+            if (scaleType === 'blues_pentatonic') return [3, 2, 1, 1, 3, 2];
+            if (scaleType.includes('pentatonic')) return ARP_LIB[scaleType].intervals.slice(0, 5);
+            return Array.isArray(intervals) ? intervals.slice() : [];
+        })();
+
+        const semitoneSet = new Set([0]);
+        let cumulative = 0;
+        intervalSequence.forEach(step => {
+            cumulative = (cumulative + step) % 12;
+            semitoneSet.add(cumulative);
+        });
+
+        for (let row = 0; row < gridH; row++) {
+            for (let col = 0; col < gridW; col++) {
+                const cell = box[row][col];
+                if (!cell) continue;
+                const diff = cell.pitch - rootPitchTarget;
+                if (diff < 0) continue;
+                const normalized = ((diff % 12) + 12) % 12;
+                if (!semitoneSet.has(normalized)) continue;
+                if (maxNotes[row] !== null && typeof maxNotes[row] === 'number' && maxNotes[row] >= 0) {
+                    const existing = box[row].filter(c => c && c.show).length;
+                    if (existing >= maxNotes[row]) continue;
+                }
+                cell.show = true;
+                cell.isRoot = normalized === 0;
+            }
+        }
+
+        return box;
+    }
+
+
+    // ==================================
+    // [SECTION: DIAGRAM RENDER FUNCTION]
+    // ==================================
+    function renderArpGrid(box, label, notes, typename, scaleType) {
+        const gridW = 5, gridH = 6, cellSize = 32;
+        const deepBlue = "#154d8b", black = "#211c1a", lightGray = "#f5f5f5", pink="#c0a4d6";
+        let html = `
+            <div style="display:inline-block; margin:12px 7px; padding:13px 9px; border:2px solid #332b48; border-radius:8px; background:#fefefeff;">
+                <div style="text-align:center;font-weight:bold;font-size:1.02em;margin-bottom:3px;">${label}</div>
+                <div style="display:grid; grid-template-columns: repeat(${gridW}, ${cellSize}px); grid-template-rows: repeat(${gridH}, ${cellSize}px); gap:2px;">
+        `;
+        for (let r = gridH-1; r >= 0; r--) {
+            for (let c = 0; c < gridW; ++c) {
+                let cell = box[r][c];
+                let cellStyle = `width:${cellSize}px;height:${cellSize}px;border:1px solid #bbb;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;border-radius:7px;`;
+                if(cell && cell.show){
+                    let bg = lightGray;
+                    let text = "#21344a";
+                    let content = cell.note;
+                    if(cell.isRoot) { bg=pink; text="#2c213e"; }
+                    cellStyle+=`background-color:${bg};color:${text};`;
+                    html+=`<div style="${cellStyle}" title="${cell.isRoot ? 'Root' : 'Scale note'}">${content}</div>`;
+                }else{
+                    html+=`<div style="${cellStyle}">·</div>`;
+                }
+            }
+        }
+        html+=`</div>`;
+        html+=`<div style="margin-top:4px;font-size:0.97em;color:#555;text-align:center;">${typename}</div>`;
+        html+=`</div>`;
+        return html;
+    }
+
+    // End of Section
+
+    function handleUpdateFretboard() {
+        const fretRangeInput = document.getElementById('fretRange');
+        if (!fretRangeInput) {
+            return;
+        }
+
+        const fretRangeValue = document.getElementById('fretRangeValue');
+        if (fretRangeValue) {
+            fretRangeValue.textContent = fretRangeInput.value;
+        }
+
+        const fretboardResult = document.getElementById('fretboardResult');
+        if (fretboardResult && fretboardResult.style.display === 'block') {
+            handleDrawFretboard();
+        }
+    }
 
     // =========================
     //   INITIALIZE
